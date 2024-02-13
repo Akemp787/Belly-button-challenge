@@ -37,7 +37,7 @@ The following task is advanced and therefore optional.
 
 - Refer to the Plotly.js documentationLinks to an external site. when building the plots.
 
-# Requirements
+## Requirements
 #### Bar Chart (30 points)
 - Chart initializes without error (10 points)
 - Chart updates when a new sample is selected (5 points)
