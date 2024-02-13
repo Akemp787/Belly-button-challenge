@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Bellybutton Biodiversity</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12 jumbotron text-center">
+        <h1>Belly Button Biodiversity Dashboard</h1>
+        <p>Use the interactive charts below to explore the dataset</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-2">
+        <div class="well">
+          <h5>Test Subject ID No.:</h5>
+          <select id="selDataset"></select>
+        </div>
+        <div class="panel panel-primary">
+          <div class="panel-heading">
+            <h3 class="panel-title">Demographic Info</h3>
+          </div>
+          <div id="sample-metadata" class="panel-body"></div>
+        </div>
+      </div>
+      <div class="col-md-5">
+        <div id="bar"></div>
+      </div>
+      <div class="col-md-5">
+        <div id="gauge"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="bubble"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script>
+    // Function to fetch data from samples.json
+    function fetchData() {
+      return fetch('samples.json')
+        .then(response => response.json())
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    // Function to populate dropdown menu with test subject IDs
+    function populateDropdown(names) {
+      var dropdown = document.getElementById('selDataset');
+      dropdown.innerHTML = ''; // Clear existing options
+      names.forEach(name => {
+        var option = document.createElement('option');
+        option.text = name;
+        option.value = name;
+        dropdown.appendChild(option);
+      });
+    }
+
+    // Function to update demographic info panel
+    function updateDemographicInfo(metadata) {
+      var metadataPanel = document.getElementById('sample-metadata');
+      metadataPanel.innerHTML = ''; // Clear existing info
+      Object.entries(metadata).forEach(([key, value]) => {
+        var p = document.createElement('p');
+        p.textContent = `${key}: ${value}`;
+        metadataPanel.appendChild(p);
+      });
+    }
+
+    // Function to create charts
+    function createCharts(sample) {
+      // Bar chart
+      var barData = [{
+        y: sample.otu_ids.slice(0, 10).map(id => `OTU ${id}`),
+        x: sample.sample_values.slice(0, 10),
+        type: 'bar',
+        orientation: 'h',
+        hovertext: sample.otu_labels.slice(0, 10)
+      }];
+
+      var barLayout = {
+        title: 'Top 10 OTUs Found',
+        yaxis: { title: 'Sample Values' },
+        xaxis: { title: 'OTU IDs' }
+      };
+
+      Plotly.newPlot('bar', barData, barLayout);
+
+      // Bubble chart
+      var bubbleData = [{
+        x: sample.otu_ids,
+        y: sample.sample_values,
+        text: sample.otu_labels,
+        mode: 'markers',
+        marker: {
+          size: sample.sample_values,
+          color: sample.otu_ids,
+          colorscale: 'Earth'
+        }
+      }];
+
+      var bubbleLayout = {
+        title: 'Bacterial Cultures Per Sample',
+        xaxis: { title: 'OTU ID' },
+      };
+
+      Plotly.newPlot('bubble', bubbleData, bubbleLayout);
+    }
+
+    // Gauge Chart 
+    // Function to create gauge chart
+function createGaugeChart(wfreq) {
+    var gaugeData = [{
+        domain: { x: [0, 1], y: [0, 1] },
+        value: wfreq,
+        title: { text: "Belly Button Washing Frequency<br>Scrubs per Week" },
+        type: "indicator",
+        mode: "gauge+number",
+        gauge: {
+            axis: { range: [null, 9] },
+            steps: [
+                { range: [0, 1], color: "#e6f2ff" },
+                { range: [1, 2], color: "#b3d9ff" },
+                { range: [2, 3], color: "#80bfff" },
+                { range: [3, 4], color: "#4da6ff" },
+                { range: [4, 5], color: "#1a8cff" },
+                { range: [5, 6], color: "#0073e6" },
+                { range: [6, 7], color: "#0059b3" },
+                { range: [7, 8], color: "#004080" },
+                { range: [8, 9], color: "#00264d" }
+            ]
+        }
+    }];
+
+    var gaugeLayout = { width: 400, height: 300, margin: { t: 0, b: 0 } };
+
+    Plotly.newPlot('gauge', gaugeData, gaugeLayout);
+}
+    // Call fetchData when the page loads
+    window.onload = function() {
+      fetchData().then(data => {
+        // Process the fetched data
+        console.log(data);
+        // Populate dropdown menu with test subject IDs
+        populateDropdown(data.names);
+        // Display demographic info for the first test subject
+        updateDemographicInfo(data.metadata[0]);
+        // Create charts
+        createCharts(data.samples[0]);
+        // Create gauge chart
+        createGaugeChart(data.metadata[0].wfreq); // Assuming wfreq is available in metadata
+      });
+
+      // Add event listener to dropdown menu
+      var dropdown = document.getElementById('selDataset');
+      dropdown.addEventListener('change', function() {
+        var selectedSample = dropdown.value;
+        console.log('Selected sample:', selectedSample);
+        // Fetch data for the selected sample and update the UI
+        fetchData().then(data => {
+          // Find the selected sample data
+          var sampleData = data.samples.find(sample => sample.id === selectedSample);
+          // Update charts with the selected sample data
+          createCharts(sampleData);
+          // Find the metadata for the selected sample
+          var metadata = data.metadata.find(metadata => metadata.id === parseInt(selectedSample));
+          // Update demographic info panel with the metadata
+          updateDemographicInfo(metadata);
+          // Update gauge chart
+          createGaugeChart(metadata.wfreq); // Assuming wfreq is available in metadata
+        });
+      });
+    };
+
+  </script>
+
+</body>
+
+</html>
